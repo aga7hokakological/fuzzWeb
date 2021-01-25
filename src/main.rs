@@ -1,6 +1,9 @@
 extern crate clap;
 
-use reqwest::IntoUrl;
+// use reqwest::IntoUrl;
+use reqwest::Url;
+
+// use url::Url;
 
 use std::io::{self, BufRead};
 use std::fs::File;
@@ -34,7 +37,7 @@ impl Fuzz {
         T: Into<OsString> + Clone,
     {
         // basic app information
-        let app = App::new("fuzz")
+        let app = App::new("fuzzWeb")
             .version("1.0")
             .about("Does awesome things")
             .author("Saurabh Mandavkar")
@@ -81,8 +84,8 @@ error_chain! {
     }
 }
 
-async fn fuzzer<U: IntoUrl>(url: U) -> Result<()>
-where U: std::convert::AsRef<Url>, 
+async fn fuzzer(url: Url) -> Result<()>
+// where U: std::convert::AsRef<>, 
 {
     let res = reqwest::get(url).await?;
     println!("Status: {}", res.status());
@@ -99,7 +102,9 @@ fn main() {
 
     println!("{}", fuzzweb.url);
 
-    fuzzer(&fuzzweb.url);
+    let url = Url::parse(&fuzzweb.url).unwrap();
+
+    fuzzer(url);
 
     // if let Ok(lines) = read_lines(&fuzzweb.file) {
     //     // Consumes the iterator, returns an (Optional) String
@@ -118,27 +123,27 @@ mod test {
 
     #[test]
     fn test_no_args() {
-        HelloArgs::new_from(["exename"].iter()).unwrap_err();
+        Fuzz::new_from(["exename"].iter()).unwrap_err();
     }
 
     #[test]
     fn test_incomplete_name() {
-        HelloArgs::new_from(["exename", "--name"].iter()).unwrap_err();
+        Fuzz::new_from(["exename", "--name"].iter()).unwrap_err();
     }
 
     #[test]
     fn test_complete_name() {
         assert_eq!(
-            HelloArgs::new_from(["exename", "--name", "Hello"].iter()).unwrap(),
-            HelloArgs { name: "Hello".to_string() }
+            Fuzz::new_from(["exename", "--name", "Hello"].iter()).unwrap(),
+            Fuzz { url: "Hello".to_string(), file: "Yo".to_string() }
         );
     }
 
     #[test]
     fn test_short_name() {
         assert_eq!(
-            HelloArgs::new_from(["exename", "-n", "Hello"].iter()).unwrap(),
-            HelloArgs { name: "Hello".to_string() }
+            Fuzz::new_from(["exename", "-n", "Hello"].iter()).unwrap(),
+            Fuzz { name: "Hello".to_string(), file: "Yo".to_string()  }
         );
     }
 
@@ -154,6 +159,6 @@ mod test {
 
     #[quickcheck]
     fn prop_never_panics(args: Vec<String>) {
-        let _ignored = HelloArgs::new_from(args.iter());
+        let _ignored = Fuzz::new_from(args.iter());
     }
 }
