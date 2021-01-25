@@ -1,7 +1,15 @@
 extern crate clap;
 
+use reqwest::IntoUrl;
+
+use std::io::{self, BufRead};
+use std::fs::File;
+use std::path::Path;
+use std::result::Result as OtherResult;
 use clap::{App, Arg};
 use std::ffi::OsString;
+
+use error_chain::error_chain;
 
 #[cfg(test)]
 extern crate quickcheck;
@@ -20,7 +28,7 @@ impl Fuzz {
         Self::new_from(std::env::args_os().into_iter()).unwrap_or_else(|e| e.exit())
     }
 
-    fn new_from<I, T>(args: I) -> Result<Self, clap::Error>
+    fn new_from<I, T>(_args: I) -> OtherResult<Self, clap::Error>
     where
         I: Iterator<Item = T>,
         T: Into<OsString> + Clone,
@@ -60,10 +68,48 @@ impl Fuzz {
     }
 }
 
+fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+where P: AsRef<Path>, {
+    let file = File::open(filename)?;
+    Ok(io::BufReader::new(file).lines())
+}
+
+error_chain! {
+    foreign_links {
+        Io(std::io::Error);
+        HttpRequest(reqwest::Error);
+    }
+}
+
+async fn fuzzer<U: IntoUrl>(url: U) -> Result<()>
+where U: std::convert::AsRef<Url>, 
+{
+    let res = reqwest::get(url).await?;
+    println!("Status: {}", res.status());
+    // println!("Headers:\n{:#?}", res.headers());
+
+    // let body = res.text().await?;
+    // println!("Body:\n{}", body);
+    Ok(())
+}
+
+
 fn main() {
     let fuzzweb = Fuzz::new();
 
     println!("{}", fuzzweb.url);
+
+    fuzzer(&fuzzweb.url);
+
+    // if let Ok(lines) = read_lines(&fuzzweb.file) {
+    //     // Consumes the iterator, returns an (Optional) String
+    //     for line in lines {
+    //         if let Ok(fuzzword) = line {
+    //             println!("{}", fuzzword);
+    //         }
+    //     }
+    // }
+
 }
 
 #[cfg(test)]
