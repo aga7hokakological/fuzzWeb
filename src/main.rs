@@ -96,24 +96,29 @@ async fn fuzzer(url: Url) -> Result<()>
     Ok(())
 }
 
-
 fn main() {
     let fuzzweb = Fuzz::new();
 
-    println!("{}", fuzzweb.url);
+    // println!("{}", fuzzweb.url);
 
     let url = Url::parse(&fuzzweb.url).unwrap();
+    // println!("{:?}", url.host_str().unwrap());
 
-    fuzzer(url);
+    // fuzzer(url);
 
-    // if let Ok(lines) = read_lines(&fuzzweb.file) {
-    //     // Consumes the iterator, returns an (Optional) String
-    //     for line in lines {
-    //         if let Ok(fuzzword) = line {
-    //             println!("{}", fuzzword);
-    //         }
-    //     }
-    // }
+    if let Ok(lines) = read_lines(&fuzzweb.file) {
+        // Consumes the iterator, returns an (Optional) String
+        for line in lines {
+            if let Ok(fuzzword) = line {
+                // println!("{}", fuzzword);
+                let url_to_fuzz = url.join(&fuzzword);
+                // println!("{:?}", url_to_fuzz.unwrap());
+                let url1 = url_to_fuzz.unwrap();
+                println!("{}", url1);
+                fuzzer(url1);
+            }
+        }
+    }
 
 }
 
