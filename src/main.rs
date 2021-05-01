@@ -1,9 +1,4 @@
-extern crate clap;
-
-// use reqwest::IntoUrl;
 use reqwest::Url;
-
-// use url::Url;
 
 use std::io::{self, BufRead};
 use std::fs::File;
@@ -84,42 +79,30 @@ error_chain! {
     }
 }
 
-async fn fuzzer(url: Url) -> Result<()>
-// where U: std::convert::AsRef<>, 
-{
+async fn fuzzer(url: Url) -> Result<()> {
     let res = reqwest::get(url).await?;
     println!("Status: {}", res.status());
-    // println!("Headers:\n{:#?}", res.headers());
 
-    // let body = res.text().await?;
-    // println!("Body:\n{}", body);
     Ok(())
 }
 
-fn main() {
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<()> {
     let fuzzweb = Fuzz::new();
 
-    // println!("{}", fuzzweb.url);
-
     let url = Url::parse(&fuzzweb.url).unwrap();
-    // println!("{:?}", url.host_str().unwrap());
-
-    // fuzzer(url);
 
     if let Ok(lines) = read_lines(&fuzzweb.file) {
         // Consumes the iterator, returns an (Optional) String
         for line in lines {
             if let Ok(fuzzword) = line {
-                // println!("{}", fuzzword);
                 let url_to_fuzz = url.join(&fuzzword);
-                // println!("{:?}", url_to_fuzz.unwrap());
                 let url1 = url_to_fuzz.unwrap();
-                println!("{}", url1);
-                fuzzer(url1);
+                fuzzer(url1).await?;
             }
         }
     }
-
+    Ok(())
 }
 
 #[cfg(test)]
