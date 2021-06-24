@@ -1,12 +1,14 @@
-use reqwest::Url;
+use reqwest::{Url, Client};
+use futures::future;
+use clap::{App, Arg};
 
 use error_chain::error_chain;
 
 use std::thread;
+use std::vec::Vec;
 use std::io::{self, prelude::*};
 use std::path::Path;
 use std::fs::File;
-use clap::{App, Arg};
 
 error_chain! {
     foreign_links {
@@ -16,10 +18,28 @@ error_chain! {
 }
 
 #[tokio::main]
-async fn fuzz(target: Url) -> Result<()> {
-    let res = reqwest::get(target).await?;
+async fn fuzz(urls: Vec<Url>) -> Result<()> {
+    let client = Client::new();
 
-    println!("{:?}", res.status());
+    // let res = reqwest::get(target).await?;
+
+    let res = future::join_all(urls.into_iter().map(|url| {
+        let client = &client;
+        async move {
+            let resp = client.get(url).send().await?;
+            resp.bytes().await
+        }
+    }))
+    .await;
+
+    // println!("{:?}", res.status());
+
+    for r in res {
+        match r {
+            Ok(r) => println!("Got {} bytes", r.len()),
+            Err(e) => eprintln!("Got an error: {}", e),
+        }
+    }
 
     Ok(())
 }
@@ -29,6 +49,7 @@ fn read_file<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
         let file = File::open(filename)?;
         Ok(io::BufReader::new(file).lines())
     }
+
 #[tokio::main]
 async fn main() -> Result<()> {
 
@@ -55,7 +76,9 @@ async fn main() -> Result<()> {
     let target = app.value_of("url").unwrap();
     let wordlist = app.value_of("wordlist").unwrap();
     let mut _timeout = 15;
-
+    
+    let mut new_vec = Vec::new();
+    
     let url = Url::parse(&target).unwrap();
 
     if let Ok(lines) = read_file(&wordlist) {
@@ -64,12 +87,17 @@ async fn main() -> Result<()> {
                 let url_to_fuzz = url.join(&fuzzword);
                 let target_url = url_to_fuzz.unwrap();
 
-                thread::spawn(|| {
-                    fuzz(target_url);
-                }).join().expect("Thread panicked")
+                new_vec.push(target_url);
+                // thread::spawn(|| {
+                //     fuzz(target_url);
+                // }).join().expect("Thread panicked")
             }
         }
     }
+
+    thread::spawn(|| {
+        fuzz(new_vec);
+    }).join().expect("Thread panicked");
 
     Ok(())
 }
