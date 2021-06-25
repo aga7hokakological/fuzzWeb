@@ -26,8 +26,9 @@ async fn fuzz(urls: Vec<Url>) -> Result<()> {
     let res = future::join_all(urls.into_iter().map(|url| {
         let client = &client;
         async move {
-            let resp = client.get(url).send().await?;
-            resp.bytes().await
+            let resp = client.get(url).send().await;
+            // println!("{:?}", resp);
+            resp.unwrap()
         }
     }))
     .await;
@@ -35,10 +36,12 @@ async fn fuzz(urls: Vec<Url>) -> Result<()> {
     // println!("{:?}", res.status());
 
     for r in res {
-        match r {
-            Ok(r) => println!("Got {} bytes", r.len()),
-            Err(e) => eprintln!("Got an error: {}", e),
-        }
+        // match r {
+        //     Ok(r) => println!("{}", r.status()),
+        //     Err(e) => eprintln!("{}", e),
+        // }
+
+        println!("{:?}: {:?}", r.url().as_str(), r.status());
     }
 
     Ok(())
@@ -75,7 +78,7 @@ async fn main() -> Result<()> {
     // Extract the actual name
     let target = app.value_of("url").unwrap();
     let wordlist = app.value_of("wordlist").unwrap();
-    let mut _timeout = 15;
+    let _timeout = 10;
     
     let mut new_vec = Vec::new();
     
@@ -88,9 +91,6 @@ async fn main() -> Result<()> {
                 let target_url = url_to_fuzz.unwrap();
 
                 new_vec.push(target_url);
-                // thread::spawn(|| {
-                //     fuzz(target_url);
-                // }).join().expect("Thread panicked")
             }
         }
     }
