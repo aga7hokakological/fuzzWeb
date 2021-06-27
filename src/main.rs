@@ -1,6 +1,7 @@
 use reqwest::{Url, Client};
 use futures::future;
 use clap::{App, Arg};
+use tokio::time::Duration;
 
 use error_chain::error_chain;
 
@@ -19,6 +20,7 @@ error_chain! {
 
 #[tokio::main]
 async fn fuzz(urls: Vec<Url>) -> Result<()> {
+    let timeout_duration = 10;
     let client = Client::new();
 
     // let res = reqwest::get(target).await?;
@@ -26,7 +28,7 @@ async fn fuzz(urls: Vec<Url>) -> Result<()> {
     let res = future::join_all(urls.into_iter().map(|url| {
         let client = &client;
         async move {
-            let resp = client.get(url).send().await;
+            let resp = client.get(url).timeout(Duration::from_secs(timeout_duration)).send().await;
             // println!("{:?}", resp);
             resp.unwrap()
         }
@@ -78,7 +80,6 @@ async fn main() -> Result<()> {
     // Extract the actual name
     let target = app.value_of("url").unwrap();
     let wordlist = app.value_of("wordlist").unwrap();
-    let _timeout = 10;
     
     let mut new_vec = Vec::new();
     
@@ -96,7 +97,7 @@ async fn main() -> Result<()> {
     }
 
     thread::spawn(|| {
-        fuzz(new_vec);
+        fuzz(new_vec).expect("Execution or files not handled properly");
     }).join().expect("Thread panicked");
 
     Ok(())
