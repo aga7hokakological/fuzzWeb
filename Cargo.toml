@@ -12,4 +12,4 @@ reqwest = "0.11.0"
 tokio = { version = "1.5.0", features = ["full"] }
 error-chain = "0.12.4"
 url = "2.2.2"
-futures = "*"
+futures = "0.3.16"
